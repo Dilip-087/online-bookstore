@@ -35,13 +35,10 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    script {
-                        // Directly pipe password into docker login to avoid credential helper lookup issues
-                        powershell "\$env:DOCKER_PASS | & '${env.DOCKER_BIN}' login -u \$env:DOCKER_USER --password-stdin"
-                        powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
-                        powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
-                    }
+                script {
+                    // Uses your local machine's existing Docker login session
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
                 }
             }
         }
