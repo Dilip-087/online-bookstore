@@ -37,7 +37,6 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Push directly using your pre-authenticated session
                     powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
                     powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
                 }
