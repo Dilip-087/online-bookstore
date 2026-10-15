@@ -36,15 +36,10 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    script {
-                        // Pass password securely via standard input and bypass credential helper errors
-                        powershell """
-                            \$env:DOCKER_PASS | & '${env.DOCKER_BIN}' login -u \$env:DOCKER_USER --password-stdin
-                            & '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}
-                            & '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest
-                        """
-                    }
+                script {
+                    // Push directly using your pre-authenticated session
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
                 }
             }
         }
