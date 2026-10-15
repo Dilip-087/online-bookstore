@@ -27,9 +27,8 @@ pipeline {
 
         stage('Build and Push to Docker Hub') {
             steps {
-                // Jenkins native Docker registry integration handles login & push securely
-                docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                    script {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
                         def customImage = docker.image("${IMAGE_NAME}:${TAG}")
                         customImage.build(".")
                         customImage.push()
