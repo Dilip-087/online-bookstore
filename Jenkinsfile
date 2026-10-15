@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDS = credentials('dockerhub-creds')
         IMAGE_NAME = 'dilip087/online-bookstore'
         TAG = "${env.BUILD_NUMBER}"
         DOCKER_BIN = 'C:\\Users\\itzme\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
@@ -28,7 +27,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Switch to default docker context to avoid permission/missing context errors in background service
                     powershell "& '${env.DOCKER_BIN}' context use default"
                     powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
                 }
@@ -37,10 +35,12 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    powershell "echo $env:DOCKER_CREDS_PSW | & '${env.DOCKER_BIN}' login -u $env:DOCKER_CREDS_USR --password-stdin"
-                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
-                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    script {
+                        powershell "echo $env:DOCKER_PASS | & '${env.DOCKER_BIN}' login -u $env:DOCKER_USER --password-stdin"
+                        powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
+                        powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
+                    }
                 }
             }
         }
