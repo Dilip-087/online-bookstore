@@ -37,7 +37,11 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     script {
-                        powershell "echo $env:DOCKER_PASS | & '${env.DOCKER_BIN}' login -u $env:DOCKER_USER --password-stdin"
+                        // Safely pass password to docker login via PowerShell standard input stream
+                        powershell """
+                            \$password = '${env.DOCKER_PASS}'
+                            \$password | & '${env.DOCKER_BIN}' login -u '${env.DOCKER_USER}' --password-stdin
+                        """
                         powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
                         powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
                     }
