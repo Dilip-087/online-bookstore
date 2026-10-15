@@ -37,7 +37,8 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Pushes directly using your working local machine session without needing a password
+                    // Explicitly log in using the direct token to bypass all credential manager bugs
+                    bat 'cmd /c "echo dckr_pat_FF5AjrywQKb2ngFFPBfD1UxVAY | \"C:\\Users\\itzme\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe\" login -u dilip087 --password-stdin"'
                     bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:${TAG}"
                     bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:latest"
                 }
