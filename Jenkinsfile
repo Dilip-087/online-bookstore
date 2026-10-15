@@ -28,6 +28,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Switch to default docker context to avoid permission/missing context errors in background service
+                    powershell "& '${env.DOCKER_BIN}' context use default"
                     powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
                 }
             }
