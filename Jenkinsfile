@@ -25,23 +25,15 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build and Push to Docker Hub') {
             steps {
-                script {
-                    powershell "& '${env.DOCKER_BIN}' context use default"
-                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
-                }
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                // Jenkins native Docker registry integration handles login & push securely
+                docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
                     script {
-                        // Explicitly log in using plain-text strings fed into the pipeline securely
-                        powershell "echo $env:DOCKER_PASS | & '${env.DOCKER_BIN}' login --username $env:DOCKER_USER --password-stdin"
-                        powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
-                        powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
+                        def customImage = docker.image("${IMAGE_NAME}:${TAG}")
+                        customImage.build(".")
+                        customImage.push()
+                        customImage.push("latest")
                     }
                 }
             }
