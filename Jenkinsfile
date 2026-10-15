@@ -36,13 +36,10 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    script {
-                        // Batch execution securely passes credentials without PowerShell parsing errors
-                        bat "echo %DOCKER_PASS% | \"${env.DOCKER_BIN}\" login -u \"%DOCKER_USER%\" --password-stdin"
-                        bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:${TAG}"
-                        bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:latest"
-                    }
+                script {
+                    // Uses your active local session credentials directly without requiring an explicit login command
+                    bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:${TAG}"
+                    bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:latest"
                 }
             }
         }
