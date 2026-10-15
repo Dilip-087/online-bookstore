@@ -20,7 +20,7 @@ pipeline {
             steps {
                 script {
                     echo "Validating workspace files..."
-                    powershell 'Get-ChildItem index.html, Dockerfile'
+                    bat 'dir index.html Dockerfile'
                 }
             }
         }
@@ -28,8 +28,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    powershell "& '${env.DOCKER_BIN}' context use default"
-                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
+                    bat "\"${env.DOCKER_BIN}\" context use default"
+                    bat "\"${env.DOCKER_BIN}\" build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
                 }
             }
         }
@@ -38,13 +38,10 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     script {
-                        // Explicitly authenticate the system service using the stored credential token
-                        powershell """
-                            \$Psw = '${env.DOCKER_PASS}'
-                            \$Psw | & '${env.DOCKER_BIN}' login -u '${env.DOCKER_USER}' --password-stdin
-                            & '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}
-                            & '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest
-                        """
+                        // Batch execution securely passes credentials without PowerShell parsing errors
+                        bat "echo %DOCKER_PASS% | \"${env.DOCKER_BIN}\" login -u \"%DOCKER_USER%\" --password-stdin"
+                        bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:${TAG}"
+                        bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:latest"
                     }
                 }
             }
