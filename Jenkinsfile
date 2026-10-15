@@ -17,8 +17,9 @@ pipeline {
         stage('Automated Quality & Test Gate') {
             steps {
                 script {
-                    echo "Running automated HTML validation and UI test checks..."
-                    sh 'ls -la index.html Dockerfile'
+                    echo "Validating workspace files..."
+                    // Safely check if files exist using PowerShell or dir
+                    powershell 'Get-ChildItem index.html, Dockerfile'
                 }
             }
         }
@@ -26,7 +27,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
+                    bat "docker build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
                 }
             }
         }
@@ -34,9 +35,9 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    sh 'echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin'
-                    sh "docker push ${IMAGE_NAME}:${TAG}"
-                    sh "docker push ${IMAGE_NAME}:latest"
+                    bat 'echo %DOCKER_CREDS_PSW% | docker login -u %DOCKER_CREDS_USR% --password-stdin'
+                    bat "docker push ${IMAGE_NAME}:${TAG}"
+                    bat "docker push ${IMAGE_NAME}:latest"
                 }
             }
         }
@@ -45,9 +46,9 @@ pipeline {
             steps {
                 script {
                     echo "Deploying application to Docker Desktop Kubernetes..."
-                    sh "kubectl apply -f k8s/service.yaml"
-                    sh "kubectl set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
-                    sh "kubectl rollout status deployment/bookstore-deployment --timeout=120s"
+                    bat "kubectl apply -f k8s/service.yaml"
+                    bat "kubectl set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
+                    bat "kubectl rollout status deployment/bookstore-deployment --timeout=120s"
                 }
             }
         }
@@ -57,7 +58,7 @@ pipeline {
         failure {
             script {
                 echo "Deployment failed! Initiating automated rollback..."
-                sh "kubectl rollout undo deployment/bookstore-deployment"
+                bat "kubectl rollout undo deployment/bookstore-deployment"
             }
         }
     }
