@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDS = credentials('dockerhub-creds')
+        DOCKER_CREDS = credentials('dockerhub') // Matches your credential ID
         IMAGE_NAME = 'dilip087/online-bookstore'
         TAG = "${env.BUILD_NUMBER}"
     }
@@ -43,7 +43,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                withKubeConfig(credentialsId: 'kubeconfig-file', serverUrl: '') {
+                withKubeConfig(credentialsId: 'kuberconfig', serverUrl: '') { // Matches your credential ID
                     script {
                         sh "kubectl apply -f k8s/service.yaml"
                         sh "kubectl set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
@@ -58,7 +58,7 @@ pipeline {
         failure {
             script {
                 echo "Deployment failed! Initiating automated rollback..."
-                withKubeConfig(credentialsId: 'kubeconfig-file', serverUrl: '') {
+                withKubeConfig(credentialsId: 'kuberconfig', serverUrl: '') {
                     sh "kubectl rollout undo deployment/bookstore-deployment"
                 }
             }
