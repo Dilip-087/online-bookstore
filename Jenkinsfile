@@ -25,15 +25,21 @@ pipeline {
             }
         }
 
-        stage('Build and Push to Docker Hub') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                        def customImage = docker.image("${IMAGE_NAME}:${TAG}")
-                        customImage.build(".")
-                        customImage.push()
-                        customImage.push("latest")
-                    }
+                    powershell "& '${env.DOCKER_BIN}' context use default"
+                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    // Pushes using your active local Docker session
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
                 }
             }
         }
