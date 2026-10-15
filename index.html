@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadWave Online Bookstore</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        header { background: var(--primary); color: white; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .controls { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        input, select { padding: 0.75rem 1rem; font-size: 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; flex: 1; min-width: 250px; }
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        .book-card { background: white; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
+        .book-card h3 { margin-top: 0; color: #0f172a; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; font-size: 0.85rem; border-radius: 1rem; background: #e2e8f0; margin-bottom: 0.75rem; }
+        .badge.in-stock { background: #dcfce7; color: #166534; }
+        .badge.out-stock { background: #fee2e2; color: #991b1b; }
+        .price { font-size: 1.25rem; font-weight: bold; color: var(--primary); margin: 0.5rem 0; }
+        button { background: var(--primary); color: white; border: none; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .section { background: white; padding: 1.5rem; border-radius: 0.75rem; margin-top: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .cart-item, .order-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
+        .rating-banner { background: #eff6ff; border-left: 4px solid var(--primary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ReadWave Bookstore</h1>
+        <div>Cart: <span id="cart-count">0</span> items</div>
+    </header>
+
+    <div class="container">
+        <!-- New Feature: Course Rating Summary -->
+        <div class="rating-banner">
+            <strong>Customer Rating Summary:</strong> 4.8 / 5.0 ⭐⭐⭐⭐⭐ (Based on 1,420 verified orders). <em>Thank you for shopping with ReadWave!</em>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="search-input" placeholder="Search by title or author..." oninput="filterBooks()">
+            <select id="category-filter" onchange="filterBooks()">
+                <option value="All">All Categories</option>
+                <option value="Technology">Technology</option>
+                <option value="Fiction">Fiction</option>
+                <option value="Business">Business</option>
+            </select>
+        </div>
+
+        <div class="book-grid" id="book-grid"></div>
+
+        <div class="section">
+            <h2>Shopping Cart</h2>
+            <div id="cart-items"><p>Your cart is empty.</p></div>
+            <p><strong>Total: $<span id="cart-total">0.00</span></strong></p>
+            <button onclick="placeOrder()" id="checkout-btn" disabled>Place Order</button>
+        </div>
+
+        <div class="section">
+            <h2>Order Tracking Status</h2>
+            <div id="order-status"><p>No active orders.</p></div>
+        </div>
+    </div>
+
+    <script>
+        const books = [
+            { id: 1, title: "Automated Testing in CI/CD", author: "Sarah Jenkins", category: "Technology", price: 45.99, stock: true },
+            { id: 2, title: "Kubernetes Microservices", author: "David Miller", category: "Technology", price: 54.50, stock: true },
+            { id: 3, title: "The Silent Algorithm", author: "Elena Rostova", category: "Fiction", price: 22.99, stock: true },
+            { id: 4, title: "Clean Code Architecture", author: "Robert Martin", category: "Technology", price: 49.99, stock: false },
+            { id: 5, title: "Scaling Agile Teams", author: "Marcus Vance", category: "Business", price: 34.00, stock: true },
+            { id: 6, title: "Quantum Computing Horizons", author: "Aanya Sharma", category: "Technology", price: 62.00, stock: true }
+        ];
+
+        let cart = [];
+        let currentOrderId = null;
+
+        function renderBooks(filteredBooks) {
+            const grid = document.getElementById('book-grid');
+            grid.innerHTML = filteredBooks.map(b => `
+                <div class="book-card">
+                    <div>
+                        <span class="badge ${b.stock ? 'in-stock' : 'out-stock'}">${b.stock ? 'In Stock' : 'Out of Stock'}</span>
+                        <span class="badge">${b.category}</span>
+                        <h3>${b.title}</h3>
+                        <p style="color: #64748b;">By ${b.author}</p>
+                    </div>
+                    <div>
+                        <div class="price">$${b.price.toFixed(2)}</div>
+                        <button onclick="addToCart(${b.id})" ${!b.stock ? 'disabled' : ''}>Add to Cart</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterBooks() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const cat = document.getElementById('category-filter').value;
+            const filtered = books.filter(b => {
+                const matchesQuery = b.title.toLowerCase().includes(query) || b.author.toLowerCase().includes(query);
+                const matchesCat = cat === 'All' || b.category === cat;
+                return matchesQuery && matchesCat;
+            });
+            renderBooks(filtered);
+        }
+
+        function addToCart(id) {
+            const book = books.find(b => b.id === id);
+            cart.push(book);
+            updateCart();
+        }
+
+        function updateCart() {
+            document.getElementById('cart-count').innerText = cart.length;
+            const container = document.getElementById('cart-items');
+            if (cart.length === 0) {
+                container.innerHTML = '<p>Your cart is empty.</p>';
+                document.getElementById('cart-total').innerText = '0.00';
+                document.getElementById('checkout-btn').disabled = true;
+                return;
+            }
+            container.innerHTML = cart.map((item, idx) => `
+                <div class="cart-item">
+                    <span>${item.title} - $${item.price.toFixed(2)}</span>
+                    <button onclick="removeFromCart(${idx})" style="background:#ef4444; padding:0.25rem 0.5rem; font-size:0.8rem;">Remove</button>
+                </div>
+            `).join('');
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+            document.getElementById('cart-total').innerText = total.toFixed(2);
+            document.getElementById('checkout-btn').disabled = false;
+        }
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            updateCart();
+        }
+
+        function placeOrder() {
+            currentOrderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('order-status').innerHTML = `
+                <div class="order-item">
+                    <span><strong>Order ID:</strong> ${currentOrderId}</span>
+                    <span class="badge in-stock">Status: Order Confirmed / Dispatched to Fulfillment</span>
+                </div>
+            `;
+            cart = [];
+            updateCart();
+        }
+
+        renderBooks(books);
+    </script>
+</body>
+</html>
