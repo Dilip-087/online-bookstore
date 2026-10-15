@@ -28,50 +28,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Fix Docker credential store issue for Windows service environment
-                    powershell """
-                        \$dockerConfig = "\$env:USERPROFILE\\.docker\\config.json"
-                        if (Test-Path \$dockerConfig) {
-                            \$content = Get-Content \$dockerConfig -Raw | ConvertFrom-Json
-                            if (\$content.credsStore) {
-                                \$content.PSObject.Properties.Remove('credsStore')
-                                \$content | ConvertTo-Json -Depth 10 | Set-Content \$dockerConfig
-                            }
-                        }
-                    """
                     powershell "& '${env.DOCKER_BIN}' context use default"
-                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
+                    powershell "& '${env.DOCKER_BIN}' build -t${IMAGE_NAME}:${TAG} -t${IMAGE_NAME}:latest ."
                 }
             }
         }
-
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
-                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
-                }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    echo "Deploying application to Docker Desktop Kubernetes..."
-                    powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' apply -f k8s/service.yaml"
-                    powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
-                    powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' rollout status deployment/bookstore-deployment --timeout=120s"
-                }
-            }
-        }
-    }
-
-    post {
-        failure {
-            script {
-                echo "Deployment failed! Initiating automated rollback..."
-                powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' rollout undo deployment/bookstore-deployment"
-            }
-        }
-    }
-}
