@@ -29,4 +29,45 @@ pipeline {
             steps {
                 script {
                     powershell "& '${env.DOCKER_BIN}' context use default"
-                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -
+                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    script {
+                        // Explicitly authenticate the system service using the stored credential token
+                        powershell """
+                            \$Psw = '${env.DOCKER_PASS}'
+                            \$Psw | & '${env.DOCKER_BIN}' login -u '${env.DOCKER_USER}' --password-stdin
+                            & '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}
+                            & '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "Deploying application to Docker Desktop Kubernetes..."
+                    powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' apply -f k8s/service.yaml"
+                    powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
+                    powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' rollout status deployment/bookstore-deployment --timeout=120s"
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            script {
+                echo "Deployment failed! Initiating automated rollback..."
+                powershell "\$env:KUBECONFIG='${env.KUBECONFIG_PATH}'; & '${env.KUBECTL_BIN}' rollout undo deployment/bookstore-deployment"
+            }
+        }
+    }
+}
