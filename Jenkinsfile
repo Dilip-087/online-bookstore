@@ -5,8 +5,8 @@ pipeline {
         DOCKER_CREDS = credentials('dockerhub-creds')
         IMAGE_NAME = 'dilip087/online-bookstore'
         TAG = "${env.BUILD_NUMBER}"
-        DOCKER_BIN = '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"'
-        KUBECTL_BIN = '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\kubectl.exe"'
+        DOCKER_BIN = 'C:\\Users\\itzme\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+        KUBECTL_BIN = 'C:\\Users\\itzme\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\kubectl.exe'
     }
 
     stages {
@@ -28,7 +28,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    bat "${env.DOCKER_BIN} build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
+                    powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
                 }
             }
         }
@@ -36,9 +36,9 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    bat "echo %DOCKER_CREDS_PSW% | ${env.DOCKER_BIN} login -u %DOCKER_CREDS_USR% --password-stdin"
-                    bat "${env.DOCKER_BIN} push ${IMAGE_NAME}:${TAG}"
-                    bat "${env.DOCKER_BIN} push ${IMAGE_NAME}:latest"
+                    powershell "echo $env:DOCKER_CREDS_PSW | & '${env.DOCKER_BIN}' login -u $env:DOCKER_CREDS_USR --password-stdin"
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:${TAG}"
+                    powershell "& '${env.DOCKER_BIN}' push ${IMAGE_NAME}:latest"
                 }
             }
         }
@@ -47,9 +47,9 @@ pipeline {
             steps {
                 script {
                     echo "Deploying application to Docker Desktop Kubernetes..."
-                    bat "${env.KUBECTL_BIN} apply -f k8s/service.yaml"
-                    bat "${env.KUBECTL_BIN} set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
-                    bat "${env.KUBECTL_BIN} rollout status deployment/bookstore-deployment --timeout=120s"
+                    powershell "& '${env.KUBECTL_BIN}' apply -f k8s/service.yaml"
+                    powershell "& '${env.KUBECTL_BIN}' set image deployment/bookstore-deployment bookstore=${IMAGE_NAME}:${TAG}"
+                    powershell "& '${env.KUBECTL_BIN}' rollout status deployment/bookstore-deployment --timeout=120s"
                 }
             }
         }
@@ -59,7 +59,7 @@ pipeline {
         failure {
             script {
                 echo "Deployment failed! Initiating automated rollback..."
-                bat "${env.KUBECTL_BIN} rollout undo deployment/bookstore-deployment"
+                powershell "& '${env.KUBECTL_BIN}' rollout undo deployment/bookstore-deployment"
             }
         }
     }
