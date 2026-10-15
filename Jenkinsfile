@@ -36,10 +36,13 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    // Uses your active local session credentials directly without requiring an explicit login command
-                    bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:${TAG}"
-                    bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:latest"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    script {
+                        // Explicitly log in securely using batch script piping
+                        bat 'cmd /c "echo %DOCKER_PASS% | \"C:\\Users\\itzme\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe\" login -u \"%DOCKER_USER%\" --password-stdin"'
+                        bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:${TAG}"
+                        bat "\"${env.DOCKER_BIN}\" push ${IMAGE_NAME}:latest"
+                    }
                 }
             }
         }
