@@ -28,6 +28,17 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Fix Docker credential store issue for Windows service environment
+                    powershell """
+                        \$dockerConfig = "\$env:USERPROFILE\\.docker\\config.json"
+                        if (Test-Path \$dockerConfig) {
+                            \$content = Get-Content \$dockerConfig -Raw | ConvertFrom-Json
+                            if (\$content.credsStore) {
+                                \$content.PSObject.Properties.Remove('credsStore')
+                                \$content | ConvertTo-Json -Depth 10 | Set-Content \$dockerConfig
+                            }
+                        }
+                    """
                     powershell "& '${env.DOCKER_BIN}' context use default"
                     powershell "& '${env.DOCKER_BIN}' build -t ${IMAGE_NAME}:${TAG} -t ${IMAGE_NAME}:latest ."
                 }
