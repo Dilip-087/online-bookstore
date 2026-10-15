@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDS = credentials('dockerhub')
+        DOCKER_CREDS = credentials('dockerhub-creds')
         IMAGE_NAME = 'dilip087/online-bookstore'
         TAG = "${env.BUILD_NUMBER}"
     }
